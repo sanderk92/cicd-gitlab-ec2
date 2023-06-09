@@ -67,7 +67,7 @@ ec2-acc:
     EC2_URL: $EC2_URL_ACC
     ENV_FILE: $ENV_FILE_ACC
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "dev"
   environment:
     name: acceptance
     url: http://ec2-35-157-43-251.eu-central-1.compute.amazonaws.com:8080/
