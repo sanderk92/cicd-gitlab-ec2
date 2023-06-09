@@ -1,0 +1,86 @@
+stages:
+  - build
+  - containerize
+  - deploy
+
+gradle:
+  stage: build
+  image: gradle:jdk17
+  script:
+    - ./gradlew build
+  artifacts:
+    expire_in: 6 hours
+    paths:
+      - build
+
+docker:
+  stage: containerize
+  image: docker:20.10.22
+  dependencies:
+    - gradle
+  services:
+    - docker:23.0.1-dind
+  script:
+    - docker build -t app .
+    - docker save app > app.tar
+  artifacts:
+    expire_in: 6 hours
+    paths:
+      - app.tar
+
+.deploy:
+  stage: deploy
+  when: manual
+  image: docker:20.10.22
+  dependencies:
+    - docker
+  before_script:
+    - chmod 600 $EC2_PEM
+    - eval "$(ssh-agent)"
+    - ssh-add -k $EC2_PEM
+    - ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_URL
+    - export DOCKER_HOST="ssh://$EC2_USER@$EC2_URL"
+  script:
+    - docker load -i app.tar
+    - docker-compose -f docker-compose-remote.yml down
+    - docker-compose -f docker-compose-remote.yml --env-file $ENV_FILE up -d
+    - docker system prune -af
+  after_script:
+    - unset DOCKER_HOST
+
+ec2-test:
+  extends: .deploy
+  variables:
+    EC2_PEM: $EC2_PEM_TST
+    EC2_USER: $EC2_USER_TST
+    EC2_URL: $EC2_URL_TST
+    ENV_FILE: $ENV_FILE_TST
+  environment:
+    name: test
+    url: http://ec2-65-421-41-971.eu-central-1.compute.amazonaws.com:8080/
+
+ec2-acc:
+  extends: .deploy
+  variables:
+    EC2_PEM: $EC2_PEM_ACC
+    EC2_USER: $EC2_USER_ACC
+    EC2_URL: $EC2_URL_ACC
+    ENV_FILE: $ENV_FILE_ACC
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"'
+  environment:
+    name: acceptance
+    url: http://ec2-35-157-43-251.eu-central-1.compute.amazonaws.com:8080/
+
+ec2-prd:
+  extends: .deploy
+  variables:
+    EC2_PEM: $EC2_PEM_PRD
+    EC2_USER: $EC2_USER_PRD
+    EC2_URL: $EC2_URL_PRD
+    ENV_FILE: $ENV_FILE_PRD
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  environment:
+    name: production
+    url: http://ec2-14-423-12-412.eu-central-1.compute.amazonaws.com:8080/
