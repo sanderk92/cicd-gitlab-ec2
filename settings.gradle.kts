@@ -1,1 +1,1 @@
-rootProject.name = "gitlab-aws"
+rootProject.name = "cicd-gitlab-ec2"

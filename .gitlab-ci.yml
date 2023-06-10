@@ -57,7 +57,7 @@ ec2-test:
     ENV_FILE: $ENV_FILE_TST
   environment:
     name: test
-    url: http://ec2-65-421-41-971.eu-central-1.compute.amazonaws.com:8080/
+    url: http://$EC2_URL_TST:8080/
 
 ec2-acc:
   extends: .deploy
@@ -70,7 +70,7 @@ ec2-acc:
     - if: '$CI_COMMIT_BRANCH == "dev"
   environment:
     name: acceptance
-    url: http://ec2-35-157-43-251.eu-central-1.compute.amazonaws.com:8080/
+    url: http://$EC2_URL_ACC:8080/
 
 ec2-prd:
   extends: .deploy
@@ -83,4 +83,4 @@ ec2-prd:
     - if: '$CI_COMMIT_BRANCH == "main"'
   environment:
     name: production
-    url: http://ec2-14-423-12-412.eu-central-1.compute.amazonaws.com:8080/
+    url: http://$EC2_URL_PRD:8080/
